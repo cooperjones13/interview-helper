@@ -37,9 +37,10 @@ interface Props {
   application: Application
   onClose: () => void
   onUpdate: (id: string, patch: Partial<Omit<Application, 'id' | 'createdAt'>>) => void
+  onDelete: (id: string) => void
 }
 
-export function ApplicationDetail({ application, onClose, onUpdate }: Props) {
+export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -62,6 +63,7 @@ export function ApplicationDetail({ application, onClose, onUpdate }: Props) {
   // Notes and JD are always editable — changes written through immediately
   const [localNotes, setLocalNotes] = useState(application.notes)
   const [localJdText, setLocalJdText] = useState(application.jdText)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -333,6 +335,37 @@ export function ApplicationDetail({ application, onClose, onUpdate }: Props) {
                   className={`${inputCls} resize-none`}
                 />
               </section>
+
+              {/* Delete */}
+              <div className="flex justify-end pt-2 pb-1">
+                {confirmingDelete ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-[13px] text-ink-muted">Delete this application?</span>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(false)}
+                      className="px-3 py-1.5 rounded-button border border-border text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-column transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { onDelete(application.id); onClose() }}
+                      className="px-3 py-1.5 rounded-button bg-stage-rejected text-white text-[13px] font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-stage-rejected focus-visible:ring-offset-1"
+                    >
+                      Yes, delete
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="text-[13px] text-ink-muted/60 hover:text-stage-rejected transition-colors focus-visible:ring-2 focus-visible:ring-stage-rejected rounded"
+                  >
+                    Delete application
+                  </button>
+                )}
+              </div>
             </div>
 
             <PositioningPanel />

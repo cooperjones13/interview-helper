@@ -6,7 +6,7 @@ import { ApplicationDetail } from './components/ApplicationDetail'
 import { ResumeDrawer } from './components/ResumeDrawer'
 
 function App() {
-  const { applications, moveApplication, addApplication, updateApplication } = useBoard()
+  const { applications, moveApplication, addApplication, updateApplication, deleteApplication } = useBoard()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [resumeDrawerOpen, setResumeDrawerOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -55,6 +55,7 @@ function App() {
           application={selectedApp}
           onClose={() => setSelectedId(null)}
           onUpdate={updateApplication}
+          onDelete={(id) => { deleteApplication(id); setSelectedId(null) }}
         />
       )}
     </div>
