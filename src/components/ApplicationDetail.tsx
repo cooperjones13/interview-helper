@@ -337,7 +337,7 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
               </section>
 
               {/* Delete */}
-              <div className="flex justify-end pt-2 pb-1">
+              <div className="flex justify-start pt-2 pb-1">
                 {confirmingDelete ? (
                   <div className="flex items-center gap-3">
                     <span className="text-[13px] text-ink-muted">Delete this application?</span>
