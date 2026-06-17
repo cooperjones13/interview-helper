@@ -85,18 +85,46 @@ function BoardApp() {
       </header>
 
       <main className="flex-1 p-6">
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          visibleCount={visibleApplications.length}
-          totalCount={applications.length}
-        />
-        <Board
-          applications={visibleApplications}
-          fitScores={fitScores}
-          onMove={moveApplication}
-          onSelect={setSelectedId}
-        />
+        {applications.length > 0 && (
+          <FilterBar
+            filters={filters}
+            onChange={setFilters}
+            visibleCount={visibleApplications.length}
+            totalCount={applications.length}
+          />
+        )}
+
+        {applications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <p className="text-[15px] font-medium text-ink">No applications yet</p>
+            <p className="text-[13px] text-ink-muted">
+              Add your first job application to start tracking.
+            </p>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="mt-2 px-4 py-2 rounded-button bg-accent text-white text-[13px] font-medium hover:bg-accent-hover transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
+              + Add application
+            </button>
+          </div>
+        ) : visibleApplications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <p className="text-[15px] font-medium text-ink">No applications match your filters</p>
+            <button
+              onClick={() => setFilters(DEFAULT_FILTERS)}
+              className="text-[13px] text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent rounded"
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <Board
+            applications={visibleApplications}
+            fitScores={fitScores}
+            onMove={moveApplication}
+            onSelect={setSelectedId}
+          />
+        )}
       </main>
 
       <AddApplicationDrawer
