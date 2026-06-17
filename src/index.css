@@ -54,11 +54,14 @@
 
   /* Reset UA dialog styles so Tailwind classes take full control */
   dialog {
+    /* Explicit centering: inset:0 + margin:auto centers a fixed element
+       whose width/height are smaller than the viewport */
+    position: fixed;
+    inset: 0;
+    margin: auto;
     padding: 0;
     border: none;
     background: transparent;
-    max-width: none;
-    max-height: none;
     color: inherit;
   }
 
