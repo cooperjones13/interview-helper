@@ -9,16 +9,9 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const selectedApp = selectedId ? (applications.find(a => a.id === selectedId) ?? null) : null
-
-  if (selectedApp) {
-    return (
-      <ApplicationDetail
-        application={selectedApp}
-        onBack={() => setSelectedId(null)}
-      />
-    )
-  }
+  const selectedApp = selectedId
+    ? (applications.find(a => a.id === selectedId) ?? null)
+    : null
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
@@ -43,6 +36,12 @@ function App() {
         onClose={() => setDrawerOpen(false)}
         onAdd={addApplication}
       />
+      {selectedApp && (
+        <ApplicationDetail
+          application={selectedApp}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
   )
 }
