@@ -28,7 +28,7 @@ function applyFilters(
 
     if (filters.dateRange !== 'all') {
       if (!app.appliedDate) return false
-      const days = filters.dateRange === '30d' ? 30 : filters.dateRange === '90d' ? 90 : 365
+      const days = filters.dateRange === '7d' ? 7 : filters.dateRange === '30d' ? 30 : filters.dateRange === '90d' ? 90 : 365
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
       if (new Date(app.appliedDate) < cutoff) return false
     }

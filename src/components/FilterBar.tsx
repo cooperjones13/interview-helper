@@ -1,6 +1,6 @@
 export interface Filters {
   query: string
-  dateRange: 'all' | '30d' | '90d' | 'year'
+  dateRange: 'all' | '7d' | '30d' | '90d' | 'year'
   score: 'all' | 'strong' | 'fair' | 'weak' | 'none'
 }
 
@@ -48,6 +48,7 @@ export function FilterBar({ filters, onChange, visibleCount, totalCount }: Props
         aria-label="Filter by applied date"
       >
         <option value="all">All dates</option>
+        <option value="7d">Last 7 days</option>
         <option value="30d">Last 30 days</option>
         <option value="90d">Last 90 days</option>
         <option value="year">This year</option>
