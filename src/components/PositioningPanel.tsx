@@ -9,11 +9,6 @@ interface Props {
   jdText: string
 }
 
-function fitColor(score: number) {
-  if (score >= 70) return 'var(--color-stage-offer)'
-  if (score >= 40) return 'var(--color-stage-interview)'
-  return 'var(--color-stage-rejected)'
-}
 
 export function PositioningPanel({ applicationId, jdText }: Props) {
   const appId = applicationId as Id<'applications'>
@@ -137,35 +132,6 @@ export function PositioningPanel({ applicationId, jdText }: Props) {
         </div>
       )}
 
-      {/* Fit score */}
-      {(analysis || analyzing) && (
-        <div className="border-t border-border pt-4">
-          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest block mb-3">
-            Fit score
-          </span>
-          {analyzing ? (
-            <div className="h-2 bg-column rounded-full w-full animate-pulse" />
-          ) : analysis ? (
-            <div className="flex items-end gap-3">
-              <span
-                className="text-[32px] font-semibold leading-none"
-                style={{ color: fitColor(analysis.fitScore) }}
-              >
-                {analysis.fitScore}
-              </span>
-              <div className="flex-1 mb-1.5">
-                <div className="h-2 bg-column rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${analysis.fitScore}%`, backgroundColor: fitColor(analysis.fitScore) }}
-                  />
-                </div>
-              </div>
-              <span className="text-[13px] text-ink-muted mb-1">/100</span>
-            </div>
-          ) : null}
-        </div>
-      )}
 
       {coverLetter && (
         <CoverLetterDialog

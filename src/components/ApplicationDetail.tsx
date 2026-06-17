@@ -26,20 +26,25 @@ function CircularScore({ score }: { score: number }) {
   const color = fitColor(score)
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--color-column)" strokeWidth={strokeWidth} />
-        <circle
-          cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke={color} strokeWidth={strokeWidth}
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[15px] font-semibold leading-none" style={{ color }}>{score}</span>
-        <span className="text-[9px] text-ink-muted/60 leading-none mt-0.5">/100</span>
+    <div className="flex flex-col items-center gap-1.5 shrink-0">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--color-column)" strokeWidth={strokeWidth} />
+          <circle
+            cx={size / 2} cy={size / 2} r={radius} fill="none"
+            stroke={color} strokeWidth={strokeWidth}
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[15px] font-semibold leading-none" style={{ color }}>{score}</span>
+          <span className="text-[9px] text-ink-muted/60 leading-none mt-0.5">/100</span>
+        </div>
       </div>
+      <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-widest">
+        Fit score
+      </span>
     </div>
   )
 }
