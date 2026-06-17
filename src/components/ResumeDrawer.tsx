@@ -14,6 +14,83 @@ const inputCls =
   'placeholder:text-ink-muted/50 focus:outline-none focus:ring-2 focus:ring-accent ' +
   'focus:ring-offset-1 transition-shadow'
 
+// ---------------------------------------------------------------------------
+// PDF preview dialog
+// ---------------------------------------------------------------------------
+
+interface PreviewProps {
+  resumeId: Id<'resumes'>
+  label: string
+  onClose: () => void
+}
+
+function PdfPreviewDialog({ resumeId, label, onClose }: PreviewProps) {
+  const url = useQuery(api.resumes.getUrl, { resumeId })
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    dialog.showModal()
+    function handleCancel(e: Event) {
+      e.preventDefault()
+      onCloseRef.current()
+    }
+    dialog.addEventListener('cancel', handleCancel)
+    return () => dialog.removeEventListener('cancel', handleCancel)
+  }, [])
+
+  function handleBackdropClick(e: React.MouseEvent<HTMLDialogElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const outside =
+      e.clientX < rect.left || e.clientX > rect.right ||
+      e.clientY < rect.top  || e.clientY > rect.bottom
+    if (outside) onClose()
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClick={handleBackdropClick}
+      aria-label={`Preview: ${label}`}
+      className="w-full max-w-3xl max-h-[90vh] bg-canvas rounded-card border border-border shadow-card-drag flex flex-col outline-none"
+    >
+      <div onClick={e => e.stopPropagation()} className="flex flex-col flex-1 min-h-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
+          <h2 className="text-[15px] font-semibold text-ink truncate">{label}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close preview"
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-button text-ink-muted hover:text-ink hover:bg-column transition-colors focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 min-h-0">
+          {url ? (
+            <iframe
+              src={url}
+              title={label}
+              className="w-full h-full border-0"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-[13px] text-ink-muted">
+              Loading…
+            </div>
+          )}
+        </div>
+      </div>
+    </dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Resume drawer
+// ---------------------------------------------------------------------------
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -33,15 +110,16 @@ export function ResumeDrawer({ open, onClose }: Props) {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<Id<'resumes'> | null>(null)
   const [draftLabel, setDraftLabel] = useState('')
+  const [previewId, setPreviewId] = useState<Id<'resumes'> | null>(null)
 
   useEffect(() => {
     if (!open) return
     function onKey(e: globalThis.KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !previewId) onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, previewId])
 
   useEffect(() => {
     if (editingId) {
@@ -94,6 +172,8 @@ export function ResumeDrawer({ open, onClose }: Props) {
   const formatDate = (ts: number) =>
     new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
+  const previewResume = resumes?.find(r => r._id === previewId)
+
   return (
     <>
       {open && (
@@ -111,7 +191,6 @@ export function ResumeDrawer({ open, onClose }: Props) {
           open ? 'translate-x-0' : 'translate-x-full',
         ].join(' ')}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="text-[15px] font-semibold text-ink">Resumes</h2>
           <button
@@ -124,9 +203,7 @@ export function ResumeDrawer({ open, onClose }: Props) {
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-          {/* Upload */}
           <div>
             <input
               ref={fileInputRef}
@@ -149,7 +226,6 @@ export function ResumeDrawer({ open, onClose }: Props) {
             )}
           </div>
 
-          {/* Resume list */}
           <div className="flex flex-col gap-2">
             {resumes === undefined && (
               <p className="text-[13px] text-ink-muted/60 text-center py-6">Loading…</p>
@@ -164,7 +240,6 @@ export function ResumeDrawer({ open, onClose }: Props) {
                 key={resume._id}
                 className="flex items-start gap-3 bg-canvas border border-border rounded-card px-4 py-3"
               >
-                {/* PDF icon */}
                 <div
                   className="w-8 h-8 shrink-0 rounded flex items-center justify-center text-[10px] font-bold text-white mt-0.5"
                   style={{ backgroundColor: 'var(--color-stage-rejected)' }}
@@ -200,19 +275,37 @@ export function ResumeDrawer({ open, onClose }: Props) {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => removeResume({ id: resume._id })}
-                  aria-label={`Delete ${resume.label}`}
-                  className="shrink-0 text-ink-muted/50 hover:text-stage-rejected transition-colors text-[16px] leading-none focus-visible:ring-2 focus-visible:ring-accent rounded p-1"
-                >
-                  ×
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewId(resume._id)}
+                    aria-label={`Preview ${resume.label}`}
+                    className="text-[12px] text-ink-muted/60 hover:text-accent transition-colors focus-visible:ring-2 focus-visible:ring-accent rounded px-1 py-1"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeResume({ id: resume._id })}
+                    aria-label={`Delete ${resume.label}`}
+                    className="text-ink-muted/50 hover:text-stage-rejected transition-colors text-[16px] leading-none focus-visible:ring-2 focus-visible:ring-accent rounded p-1"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {previewId && previewResume && (
+        <PdfPreviewDialog
+          resumeId={previewId}
+          label={previewResume.label}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
     </>
   )
 }

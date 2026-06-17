@@ -36,6 +36,15 @@ export const updateLabel = mutation({
   },
 })
 
+export const getUrl = query({
+  args: { resumeId: v.id('resumes') },
+  handler: async (ctx, { resumeId }) => {
+    const resume = await ctx.db.get(resumeId)
+    if (!resume) return null
+    return ctx.storage.getUrl(resume.storageId)
+  },
+})
+
 export const remove = mutation({
   args: { id: v.id('resumes') },
   handler: async (ctx, { id }) => {
