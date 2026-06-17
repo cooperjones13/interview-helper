@@ -11,6 +11,39 @@ const inputCls =
   'placeholder:text-ink-muted/50 focus:outline-none focus:ring-2 focus:ring-accent ' +
   'focus:ring-offset-1 transition-shadow'
 
+function fitColor(score: number) {
+  if (score >= 70) return 'var(--color-stage-offer)'
+  if (score >= 40) return 'var(--color-stage-interview)'
+  return 'var(--color-stage-rejected)'
+}
+
+function CircularScore({ score }: { score: number }) {
+  const size = 72
+  const strokeWidth = 5
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - score / 100)
+  const color = fitColor(score)
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--color-column)" strokeWidth={strokeWidth} />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none"
+          stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[15px] font-semibold leading-none" style={{ color }}>{score}</span>
+        <span className="text-[9px] text-ink-muted/60 leading-none mt-0.5">/100</span>
+      </div>
+    </div>
+  )
+}
+
 function ViewField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
@@ -282,7 +315,11 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                  <div className="flex gap-6 items-start">
+                    {analysis?.fitScore !== undefined && (
+                      <CircularScore score={analysis.fitScore} />
+                    )}
+                    <div className="flex-1 grid grid-cols-2 gap-x-8 gap-y-5">
                     <ViewField label="Company">{application.company}</ViewField>
                     <ViewField label="Role">{application.role}</ViewField>
                     {application.location && (
@@ -306,6 +343,7 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
                         </a>
                       </ViewField>
                     )}
+                    </div>
                   </div>
                 )}
           </section>

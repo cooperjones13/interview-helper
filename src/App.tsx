@@ -54,8 +54,7 @@ function BoardApp() {
   const fitScores: Record<string, number> = Object.fromEntries(
     (fitScoreData ?? []).map(f => [f.applicationId, f.fitScore])
   )
-
-  const [drawerOpen, setDrawerOpen] = useState(false)
+const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerDefaultStage, setDrawerDefaultStage] = useState<Stage>('interested')
   const [resumeDrawerOpen, setResumeDrawerOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
