@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import type { Application, Stage } from '../types'
 import { STAGES } from '../types'
 import { PositioningPanel } from './PositioningPanel'
+import { CoverLetterDialog } from './CoverLetterDialog'
+import { InterviewPrepDialog } from './InterviewPrepDialog'
 
 const inputCls =
   'w-full rounded-button border border-border bg-canvas px-3 py-2 text-[13px] text-ink ' +
@@ -113,6 +115,49 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
   const [localNotes, setLocalNotes] = useState(application.notes)
   const [localJdText, setLocalJdText] = useState(application.jdText)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [selectedResumeId, setSelectedResumeId] = useState('')
+  const [coverLetter, setCoverLetter] = useState<string | null>(null)
+  const [generatingLetter, setGeneratingLetter] = useState(false)
+  const [letterError, setLetterError] = useState<string | null>(null)
+  const [interviewPrep, setInterviewPrep] = useState<Parameters<typeof InterviewPrepDialog>[0]['prep'] | null>(null)
+  const [generatingPrep, setGeneratingPrep] = useState(false)
+  const [prepError, setPrepError] = useState<string | null>(null)
+
+  const resumes = useQuery(api.resumes.list)
+  const runCoverLetter = useAction(api.ai.generateCoverLetter)
+  const runInterviewPrep = useAction(api.ai.generateInterviewPrep)
+
+  const resumeList = resumes ?? []
+  const activeResumeId = (selectedResumeId || resumeList[0]?._id || '') as Id<'resumes'>
+  const hasJd = localJdText.trim().length > 0
+
+  async function handleGenerateLetter() {
+    if (!activeResumeId || !hasJd) return
+    setGeneratingLetter(true)
+    setLetterError(null)
+    try {
+      const letter = await runCoverLetter({ applicationId: application.id as Id<'applications'>, resumeId: activeResumeId })
+      setCoverLetter(letter)
+    } catch (e) {
+      setLetterError(e instanceof Error ? e.message : 'Generation failed — please try again.')
+    } finally {
+      setGeneratingLetter(false)
+    }
+  }
+
+  async function handleGeneratePrep() {
+    if (!activeResumeId || !hasJd) return
+    setGeneratingPrep(true)
+    setPrepError(null)
+    try {
+      const prep = await runInterviewPrep({ applicationId: application.id as Id<'applications'>, resumeId: activeResumeId })
+      setInterviewPrep(prep)
+    } catch (e) {
+      setPrepError(e instanceof Error ? e.message : 'Generation failed — please try again.')
+    } finally {
+      setGeneratingPrep(false)
+    }
+  }
 
   const analysis = useQuery(api.analyses.getByApplication, {
     applicationId: application.id as Id<'applications'>,
@@ -395,26 +440,75 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
           </div>
 
           {/* Row 3: AI Positioning + Summary — one card */}
-          <div className="bg-card border border-border rounded-card flex items-stretch">
-            <div className="w-[320px] shrink-0 p-5 border-r border-border">
-              <PositioningPanel
-                applicationId={application.id}
-                jdText={localJdText}
-              />
+          <div className="bg-card border border-border rounded-card flex flex-col">
+            {/* Top: controls (left) + summary (right) */}
+            <div className="flex items-stretch">
+              <div className="w-[320px] shrink-0 p-5 border-r border-border">
+                <PositioningPanel
+                  applicationId={application.id}
+                  jdText={localJdText}
+                  selectedResumeId={selectedResumeId}
+                  onResumeChange={setSelectedResumeId}
+                />
+              </div>
+              <div className="flex-1 min-w-0 p-5 flex flex-col">
+                <h3 className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-3">
+                  Positioning summary
+                </h3>
+                {analysis?.summary ? (
+                  <p className="text-[14px] text-ink leading-relaxed">{analysis.summary}</p>
+                ) : (
+                  <p className="text-[13px] text-ink-muted/60">
+                    Run analysis to see your positioning summary.
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0 p-5 flex flex-col">
-              <h3 className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-3">
-                Positioning summary
-              </h3>
-              {analysis?.summary ? (
-                <p className="text-[14px] text-ink leading-relaxed">{analysis.summary}</p>
-              ) : (
-                <p className="text-[13px] text-ink-muted/60">
-                  Run analysis to see your positioning summary.
-                </p>
-              )}
+
+            {/* Bottom: action buttons spanning full width */}
+            <div className="flex border-t border-border">
+              <button
+                type="button"
+                onClick={handleGenerateLetter}
+                disabled={!hasJd || !activeResumeId || generatingLetter}
+                className="flex-1 px-4 py-3 text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-column transition-colors border-r border-border disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+              >
+                {generatingLetter ? 'Generating…' : 'Generate cover letter'}
+              </button>
+              <button
+                type="button"
+                onClick={handleGeneratePrep}
+                disabled={!hasJd || !activeResumeId || generatingPrep}
+                className="flex-1 px-4 py-3 text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-column transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+              >
+                {generatingPrep ? 'Generating…' : 'Prepare for interview'}
+              </button>
             </div>
+
+            {(letterError || prepError) && (
+              <div className="px-5 pb-3 flex gap-4">
+                {letterError && <p role="alert" className="text-[12px] text-stage-rejected">{letterError}</p>}
+                {prepError && <p role="alert" className="text-[12px] text-stage-rejected">{prepError}</p>}
+              </div>
+            )}
           </div>
+
+          {coverLetter && (
+            <CoverLetterDialog
+              letter={coverLetter}
+              regenerating={generatingLetter}
+              onRegenerate={handleGenerateLetter}
+              onClose={() => setCoverLetter(null)}
+            />
+          )}
+          {interviewPrep && (
+            <InterviewPrepDialog
+              prep={interviewPrep}
+              regenerating={generatingPrep}
+              onRegenerate={handleGeneratePrep}
+              onClose={() => setInterviewPrep(null)}
+            />
+          )}
 
           {/* Analysis details — full width */}
           {analysis && (
