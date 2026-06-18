@@ -395,14 +395,14 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
           </div>
 
           {/* Row 3: AI Positioning + Summary — one card */}
-          <div className="bg-card border border-border rounded-card flex items-stretch overflow-hidden">
+          <div className="bg-card border border-border rounded-card flex items-stretch">
             <div className="w-[320px] shrink-0 p-5 border-r border-border">
               <PositioningPanel
                 applicationId={application.id}
                 jdText={localJdText}
               />
             </div>
-            <div className="flex-1 p-5 flex flex-col">
+            <div className="flex-1 min-w-0 p-5 flex flex-col">
               <h3 className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-3">
                 Positioning summary
               </h3>
