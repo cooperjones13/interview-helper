@@ -138,28 +138,37 @@ interface ExtractedJob {
 export const extractJobFromUrl = action({
   args: { url: v.string() },
   handler: async (_ctx, { url }): Promise<ExtractedJob> => {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-    })
-
-    if (!res.ok) throw new Error(`Could not fetch that URL (${res.status})`)
-
-    const html = await res.text()
-    const text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/\s{2,}/g, ' ')
-      .trim()
-      .slice(0, 60000)
+    // Jina AI Reader renders JavaScript-heavy pages and returns clean text.
+    // Falls back to direct HTML fetch if Jina fails.
+    let text: string
+    try {
+      const jinaRes = await fetch(`https://r.jina.ai/${url}`, {
+        headers: { Accept: 'text/plain', 'X-Return-Format': 'text' },
+      })
+      if (!jinaRes.ok) throw new Error('Jina failed')
+      text = (await jinaRes.text()).slice(0, 80000)
+    } catch {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      })
+      if (!res.ok) throw new Error(`Could not fetch that URL (${res.status})`)
+      const html = await res.text()
+      text = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+        .slice(0, 80000)
+    }
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
