@@ -174,7 +174,7 @@ export const extractJobFromUrl = action({
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: 4096,
       tools: [
         {
           name: 'extract_job',
