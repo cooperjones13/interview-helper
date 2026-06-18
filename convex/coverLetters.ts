@@ -14,22 +14,46 @@ export const getByApplication = query({
   },
 })
 
-export const upsert = internalMutation({
-  args: {
-    userId: v.string(),
-    applicationId: v.id('applications'),
-    letter: v.string(),
-    model: v.string(),
-  },
+// Call at start of generation — creates a pending record immediately
+export const markPending = internalMutation({
+  args: { userId: v.string(), applicationId: v.id('applications'), model: v.string() },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('coverLetters')
       .withIndex('by_application', q => q.eq('applicationId', args.applicationId))
       .first()
     if (existing) {
-      await ctx.db.patch(existing._id, { letter: args.letter, model: args.model })
+      await ctx.db.patch(existing._id, { status: 'pending', letter: undefined })
     } else {
-      await ctx.db.insert('coverLetters', args)
+      await ctx.db.insert('coverLetters', { ...args, status: 'pending' })
+    }
+  },
+})
+
+// Call when generation succeeds
+export const markComplete = internalMutation({
+  args: { applicationId: v.id('applications'), letter: v.string() },
+  handler: async (ctx, { applicationId, letter }) => {
+    const existing = await ctx.db
+      .query('coverLetters')
+      .withIndex('by_application', q => q.eq('applicationId', applicationId))
+      .first()
+    if (existing) {
+      await ctx.db.patch(existing._id, { status: 'complete', letter })
+    }
+  },
+})
+
+// Call when generation fails — delete so user can try again
+export const clearPending = internalMutation({
+  args: { applicationId: v.id('applications') },
+  handler: async (ctx, { applicationId }) => {
+    const existing = await ctx.db
+      .query('coverLetters')
+      .withIndex('by_application', q => q.eq('applicationId', applicationId))
+      .first()
+    if (existing?.status === 'pending') {
+      await ctx.db.delete(existing._id)
     }
   },
 })

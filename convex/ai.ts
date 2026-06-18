@@ -238,7 +238,12 @@ export const generateInterviewPrep = action({
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const response = await anthropic.messages.create({
+    // Write pending status immediately so the UI shows "Generating…" even if user closes the modal
+    await ctx.runMutation(internal.interviewPreps.markPending, { userId, applicationId, model: MODEL })
+
+    let response
+    try {
+      response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 3000,
       tools: [
@@ -326,19 +331,24 @@ For each question, give concrete guidance that references specific projects, ski
         },
       ],
     })
+    } catch (e) {
+      await ctx.runMutation(internal.interviewPreps.clearPending, { applicationId })
+      throw e
+    }
 
     const toolUse = response.content.find(b => b.type === 'tool_use')
-    if (!toolUse || toolUse.type !== 'tool_use') throw new Error('No interview prep returned')
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      await ctx.runMutation(internal.interviewPreps.clearPending, { applicationId })
+      throw new Error('No interview prep returned')
+    }
     const result = toolUse.input as InterviewPrep
 
-    await ctx.runMutation(internal.interviewPreps.upsert, {
-      userId,
+    await ctx.runMutation(internal.interviewPreps.markComplete, {
       applicationId,
       behavioral: result.behavioral,
       technical: result.technical,
       roleSpecific: result.roleSpecific,
       culture: result.culture,
-      model: MODEL,
     })
   },
 })
@@ -371,7 +381,11 @@ export const generateCoverLetter = action({
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const response = await anthropic.messages.create({
+    await ctx.runMutation(internal.coverLetters.markPending, { userId, applicationId, model: MODEL })
+
+    let response
+    try {
+      response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 1024,
       messages: [
@@ -407,22 +421,26 @@ Rules — breaking any of these makes the letter unusable:
 9. Be specific — name actual projects, technologies, or experiences from the resume. Generic praise adds nothing.
 10. Write with confidence. No hedging: no "I believe", "I feel", "I think", "I hope".
 11. Three paragraphs only: (1) a specific opening hook that names something concrete, (2) one or two examples of directly relevant work, (3) a brief, direct close — one or two sentences.
-12. Under 350 words total.
-13. You may use **bold** sparingly (1–2 times maximum) to emphasise a specific skill or achievement that directly matches the role. Do not use *italic*.`,
+12. Under 350 words total.`,
             },
           ],
         },
       ],
     })
+    } catch (e) {
+      await ctx.runMutation(internal.coverLetters.clearPending, { applicationId })
+      throw e
+    }
 
     const textBlock = response.content.find(b => b.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') throw new Error('No cover letter returned')
+    if (!textBlock || textBlock.type !== 'text') {
+      await ctx.runMutation(internal.coverLetters.clearPending, { applicationId })
+      throw new Error('No cover letter returned')
+    }
 
-    await ctx.runMutation(internal.coverLetters.upsert, {
-      userId,
+    await ctx.runMutation(internal.coverLetters.markComplete, {
       applicationId,
       letter: textBlock.text,
-      model: MODEL,
     })
   },
 })

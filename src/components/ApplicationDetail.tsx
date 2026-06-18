@@ -119,10 +119,8 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
   const [selectedResumeId, setSelectedResumeId] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-  const [generatingLetter, setGeneratingLetter] = useState(false)
   const [letterError, setLetterError] = useState<string | null>(null)
   const [letterOpen, setLetterOpen] = useState(false)
-  const [generatingPrep, setGeneratingPrep] = useState(false)
   const [prepError, setPrepError] = useState<string | null>(null)
   const [prepOpen, setPrepOpen] = useState(false)
 
@@ -141,6 +139,10 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
   const activeResumeId = (selectedResumeId || resumeList[0]?._id || '') as Id<'resumes'>
   const hasJd = localJdText.trim().length > 0
 
+  // Derived from DB — survives modal close/reopen
+  const generatingLetter = storedLetter?.status === 'pending'
+  const generatingPrep = storedPrep?.status === 'pending'
+
   async function handleAnalyze() {
     if (!activeResumeId || !hasJd) return
     setAnalyzing(true)
@@ -156,29 +158,23 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
 
   async function handleGenerateLetter() {
     if (!activeResumeId || !hasJd) return
-    setGeneratingLetter(true)
     setLetterError(null)
     try {
       await runCoverLetter({ applicationId: appId, resumeId: activeResumeId })
       setLetterOpen(true)
     } catch (e) {
       setLetterError(e instanceof Error ? e.message : 'Generation failed — please try again.')
-    } finally {
-      setGeneratingLetter(false)
     }
   }
 
   async function handleGeneratePrep() {
     if (!activeResumeId || !hasJd) return
-    setGeneratingPrep(true)
     setPrepError(null)
     try {
       await runInterviewPrep({ applicationId: appId, resumeId: activeResumeId })
       setPrepOpen(true)
     } catch (e) {
       setPrepError(e instanceof Error ? e.message : 'Generation failed — please try again.')
-    } finally {
-      setGeneratingPrep(false)
     }
   }
 
@@ -499,19 +495,19 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
               )}
               <button
                 type="button"
-                onClick={storedLetter ? () => setLetterOpen(true) : handleGenerateLetter}
+                onClick={storedLetter?.status !== 'pending' ? () => setLetterOpen(true) : handleGenerateLetter}
                 disabled={!hasJd || !activeResumeId || generatingLetter}
                 className="flex-1 px-4 py-3 text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-column transition-colors border-r border-border disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
               >
-                {generatingLetter ? 'Generating…' : storedLetter ? 'View cover letter' : 'Generate cover letter'}
+                {generatingLetter ? 'Generating…' : storedLetter?.status !== 'pending' ? 'View cover letter' : 'Generate cover letter'}
               </button>
               <button
                 type="button"
-                onClick={storedPrep ? () => setPrepOpen(true) : handleGeneratePrep}
+                onClick={storedPrep?.status !== 'pending' ? () => setPrepOpen(true) : handleGeneratePrep}
                 disabled={!hasJd || !activeResumeId || generatingPrep}
                 className="flex-1 px-4 py-3 text-[13px] font-medium text-ink-muted hover:text-ink hover:bg-column transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
               >
-                {generatingPrep ? 'Generating…' : storedPrep ? 'View interview prep' : 'Prepare for interview'}
+                {generatingPrep ? 'Generating…' : storedPrep?.status !== 'pending' ? 'View interview prep' : 'Prepare for interview'}
               </button>
             </div>
 
@@ -523,7 +519,7 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
             )}
           </div>
 
-          {letterOpen && storedLetter && (
+          {letterOpen && storedLetter?.status !== 'pending' && storedLetter.letter && (
             <CoverLetterDialog
               letter={storedLetter.letter}
               regenerating={generatingLetter}
@@ -531,9 +527,9 @@ export function ApplicationDetail({ application, onClose, onUpdate, onDelete }: 
               onClose={() => setLetterOpen(false)}
             />
           )}
-          {prepOpen && storedPrep && (
+          {prepOpen && storedPrep?.status !== 'pending' && storedPrep.behavioral && (
             <InterviewPrepDialog
-              prep={storedPrep}
+              prep={storedPrep as Parameters<typeof InterviewPrepDialog>[0]['prep']}
               regenerating={generatingPrep}
               onRegenerate={handleGeneratePrep}
               onClose={() => setPrepOpen(false)}

@@ -47,17 +47,19 @@ export default defineSchema({
   coverLetters: defineTable({
     userId: v.string(),
     applicationId: v.id('applications'),
-    letter: v.string(),
+    status: v.optional(v.union(v.literal('pending'), v.literal('complete'))),
+    letter: v.optional(v.string()),
     model: v.string(),
   }).index('by_application', ['applicationId']),
 
   interviewPreps: defineTable({
     userId: v.string(),
     applicationId: v.id('applications'),
-    behavioral: v.array(v.object({ question: v.string(), guidance: v.string() })),
-    technical: v.array(v.object({ question: v.string(), guidance: v.string() })),
-    roleSpecific: v.array(v.object({ question: v.string(), guidance: v.string() })),
-    culture: v.array(v.object({ question: v.string(), guidance: v.string() })),
+    status: v.optional(v.union(v.literal('pending'), v.literal('complete'))),
+    behavioral: v.optional(v.array(v.object({ question: v.string(), guidance: v.string() }))),
+    technical: v.optional(v.array(v.object({ question: v.string(), guidance: v.string() }))),
+    roleSpecific: v.optional(v.array(v.object({ question: v.string(), guidance: v.string() }))),
+    culture: v.optional(v.array(v.object({ question: v.string(), guidance: v.string() }))),
     model: v.string(),
   }).index('by_application', ['applicationId']),
 
