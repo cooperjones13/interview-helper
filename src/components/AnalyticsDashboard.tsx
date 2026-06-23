@@ -147,7 +147,7 @@ export function AnalyticsDashboard({ onClose }: Props) {
               {/* Weekly timeline */}
               <section className="bg-card border border-border rounded-card p-5">
                 <h3 className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-4">
-                  Applications added — last 8 weeks
+                  Applications submitted — last 12 weeks
                 </h3>
                 <div className="flex items-end gap-2 h-28">
                   {stats.weeks.map((week, i) => {
