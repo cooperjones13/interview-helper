@@ -7,6 +7,7 @@ async function requireUser(ctx: { auth: { getUserIdentity(): Promise<{ subject: 
 }
 
 export const getPipelineStats = query({
+  args: {},
   handler: async (ctx) => {
     const userId = await requireUser(ctx)
 
@@ -61,8 +62,10 @@ export const getPipelineStats = query({
       const start = now - (i + 1) * weekMs
       const end = now - i * weekMs
       const count = myApps.filter(a => {
-        const created = a._creationTime
-        return created >= start && created < end
+        const ts = a.appliedDate
+          ? new Date(a.appliedDate).getTime()
+          : a._creationTime
+        return ts >= start && ts < end
       }).length
       const date = new Date(end)
       const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
