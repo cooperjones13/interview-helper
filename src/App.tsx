@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useDarkMode } from './hooks/useDarkMode'
 import { exportApplicationsCSV } from './utils/exportCSV'
 import { useQuery } from 'convex/react'
@@ -12,6 +12,8 @@ import { AddApplicationDrawer } from './components/AddApplicationDrawer'
 import { ApplicationDetail } from './components/ApplicationDetail'
 import { ResumeDrawer } from './components/ResumeDrawer'
 import { AnalyticsDashboard } from './components/AnalyticsDashboard'
+import { Toaster } from './components/Toaster'
+import type { Toast } from './components/Toaster'
 import type { Application, Stage } from './types'
 
 function applyFilters(
@@ -57,17 +59,90 @@ function BoardApp() {
   const fitScores: Record<string, number> = Object.fromEntries(
     (fitScoreData ?? []).map(f => [f.applicationId, f.fitScore])
   )
-const [dark, setDark] = useDarkMode()
+  const allLetters = useQuery(api.coverLetters.listAll) ?? []
+  const allPreps = useQuery(api.interviewPreps.listAll) ?? []
+
+  const [dark, setDark] = useDarkMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerDefaultStage, setDrawerDefaultStage] = useState<Stage>('interested')
   const [resumeDrawerOpen, setResumeDrawerOpen] = useState(false)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const addToast = useCallback((message: string, type: Toast['type'], id?: string) => {
+    const toastId = id ?? `${Date.now()}-${Math.random()}`
+    setToasts(ts => {
+      // replace if same id already exists (e.g. re-generating)
+      if (ts.some(t => t.id === toastId)) {
+        return ts.map(t => t.id === toastId ? { ...t, message, type } : t)
+      }
+      return [...ts, { id: toastId, message, type }]
+    })
+  }, [])
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts(ts => ts.filter(t => t.id !== id))
+  }, [])
+
+  // Detect cover letter and interview prep completions
+  const applicationsRef = useRef(applications)
+  applicationsRef.current = applications
+  const prevLetterStatuses = useRef(new Map<string, string | undefined>())
+  const prevPrepStatuses = useRef(new Map<string, string | undefined>())
+  const addToastRef = useRef(addToast)
+  addToastRef.current = addToast
+  const dismissToastRef = useRef(dismissToast)
+  dismissToastRef.current = dismissToast
+
+  useEffect(() => {
+    for (const letter of allLetters) {
+      const appId = letter.applicationId as string
+      const prev = prevLetterStatuses.current.get(appId)
+      if (prev === 'pending' && letter.status === 'complete') {
+        const app = applicationsRef.current.find(a => a.id === appId)
+        if (app) {
+          dismissToastRef.current(`letter-${appId}`)
+          addToastRef.current(`Cover letter for ${app.company} is ready`, 'success')
+        }
+      }
+    }
+    prevLetterStatuses.current = new Map(allLetters.map(l => [l.applicationId as string, l.status]))
+  }, [allLetters])
+
+  useEffect(() => {
+    for (const prep of allPreps) {
+      const appId = prep.applicationId as string
+      const prev = prevPrepStatuses.current.get(appId)
+      if (prev === 'pending' && prep.status === 'complete') {
+        const app = applicationsRef.current.find(a => a.id === appId)
+        if (app) {
+          dismissToastRef.current(`prep-${appId}`)
+          addToastRef.current(`Interview prep for ${app.company} is ready`, 'success')
+        }
+      }
+    }
+    prevPrepStatuses.current = new Map(allPreps.map(p => [p.applicationId as string, p.status]))
+  }, [allPreps])
 
   function openAddForStage(stage: Stage) {
     setDrawerDefaultStage(stage)
     setDrawerOpen(true)
+  }
+
+  const aiStatus: Record<string, { letter: boolean; prep: boolean }> = {}
+  for (const l of allLetters) {
+    if (l.status === 'complete' && l.letter) {
+      const id = l.applicationId as string
+      aiStatus[id] = { letter: true, prep: aiStatus[id]?.prep ?? false }
+    }
+  }
+  for (const p of allPreps) {
+    if (p.status === 'complete' && p.behavioral?.length) {
+      const id = p.applicationId as string
+      aiStatus[id] = { letter: aiStatus[id]?.letter ?? false, prep: true }
+    }
   }
 
   const visibleApplications = applyFilters(applications, filters, fitScores)
@@ -108,14 +183,6 @@ const [dark, setDark] = useDarkMode()
           >
             Resumes
           </button>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Add application"
-            className="px-3 sm:px-4 py-2 rounded-button bg-accent-btn text-white text-[13px] font-medium hover:bg-accent-btn-hover transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          >
-            <span aria-hidden="true" className="sm:hidden">+</span>
-            <span aria-hidden="true" className="hidden sm:inline">+ Add application</span>
-          </button>
           <div className="ml-2">
             <UserButton />
           </div>
@@ -123,27 +190,20 @@ const [dark, setDark] = useDarkMode()
       </header>
 
       <main className="flex-1 p-3 sm:p-6">
-        {applications.length > 0 && (
-          <FilterBar
-            filters={filters}
-            onChange={setFilters}
-            visibleCount={visibleApplications.length}
-            totalCount={applications.length}
-          />
-        )}
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          visibleCount={visibleApplications.length}
+          totalCount={applications.length}
+          onAdd={() => setDrawerOpen(true)}
+        />
 
         {applications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
             <p className="text-[15px] font-medium text-ink">No applications yet</p>
             <p className="text-[13px] text-ink-muted">
               Add your first job application to start tracking.
             </p>
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="mt-2 px-4 py-2 rounded-button bg-accent-btn text-white text-[13px] font-medium hover:bg-accent-btn-hover transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-            >
-              + Add application
-            </button>
           </div>
         ) : visibleApplications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
@@ -159,6 +219,7 @@ const [dark, setDark] = useDarkMode()
           <Board
             applications={visibleApplications}
             fitScores={fitScores}
+            aiStatus={aiStatus}
             onMove={moveApplication}
             onSelect={setSelectedId}
             onAdd={openAddForStage}
@@ -185,8 +246,10 @@ const [dark, setDark] = useDarkMode()
           onClose={() => setSelectedId(null)}
           onUpdate={updateApplication}
           onDelete={(id) => { deleteApplication(id); setSelectedId(null) }}
+          onToast={addToast}
         />
       )}
+      <Toaster toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }

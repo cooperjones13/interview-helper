@@ -6,11 +6,12 @@ interface Props {
   stage: StageConfig
   applications: Application[]
   fitScores: Record<string, number>
+  aiStatus: Record<string, { letter: boolean; prep: boolean }>
   onSelect: (id: string) => void
   onAdd: () => void
 }
 
-export function Column({ stage, applications, fitScores, onSelect, onAdd }: Props) {
+export function Column({ stage, applications, fitScores, aiStatus, onSelect, onAdd }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id })
 
   return (
@@ -49,7 +50,7 @@ export function Column({ stage, applications, fitScores, onSelect, onAdd }: Prop
         aria-label={`${stage.label} — ${applications.length} application${applications.length === 1 ? '' : 's'}`}
       >
         {applications.map(app => (
-          <ApplicationCard key={app.id} application={app} fitScore={fitScores[app.id]} onClick={() => onSelect(app.id)} />
+          <ApplicationCard key={app.id} application={app} fitScore={fitScores[app.id]} aiStatus={aiStatus[app.id]} onClick={() => onSelect(app.id)} />
         ))}
         {applications.length === 0 && (
           <p className="text-[12px] text-ink-muted/50 self-center pl-2 select-none" aria-hidden="true">

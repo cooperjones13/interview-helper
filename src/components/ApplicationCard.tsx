@@ -19,13 +19,38 @@ function fitScoreColor(score: number) {
   return 'var(--color-stage-rejected)'
 }
 
+function IconDoc({ title }: { title: string }) {
+  return (
+    <svg width="13" height="14" viewBox="0 0 13 14" fill="none" aria-hidden="true">
+      <title>{title}</title>
+      <rect x="1" y="1" width="9" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.25"/>
+      <line x1="3" y1="4.5" x2="8" y2="4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="3" y1="6.5" x2="8" y2="6.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="3" y1="8.5" x2="6" y2="8.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+function IconChat({ title }: { title: string }) {
+  return (
+    <svg width="14" height="13" viewBox="0 0 14 13" fill="none" aria-hidden="true">
+      <title>{title}</title>
+      <path
+        d="M12.5 1H1.5C1.22 1 1 1.22 1 1.5V8.5C1 8.78 1.22 9 1.5 9H4.5L7 12L9.5 9H12.5C12.78 9 13 8.78 13 8.5V1.5C13 1.22 12.78 1 12.5 1Z"
+        stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 interface CardVisualProps {
   application: Application
   fitScore?: number
+  aiStatus?: { letter: boolean; prep: boolean }
   isOverlay?: boolean
 }
 
-function CardVisual({ application, fitScore, isOverlay = false }: CardVisualProps) {
+function CardVisual({ application, fitScore, aiStatus, isOverlay = false }: CardVisualProps) {
   const stage = getStageConfig(application.stage)
   const date = formatDate(application.appliedDate)
 
@@ -78,6 +103,20 @@ function CardVisual({ application, fitScore, isOverlay = false }: CardVisualProp
             <span>{date}</span>
           </>
         )}
+        {(aiStatus?.letter || aiStatus?.prep) && (
+          <span className="ml-auto flex items-center gap-1 text-ink-muted/60" aria-label="AI content available">
+            {aiStatus.letter && (
+              <span title="Cover letter generated">
+                <IconDoc title="Cover letter" />
+              </span>
+            )}
+            {aiStatus.prep && (
+              <span title="Interview prep generated">
+                <IconChat title="Interview prep" />
+              </span>
+            )}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -86,10 +125,11 @@ function CardVisual({ application, fitScore, isOverlay = false }: CardVisualProp
 interface ApplicationCardProps {
   application: Application
   fitScore?: number
+  aiStatus?: { letter: boolean; prep: boolean }
   onClick?: () => void
 }
 
-export function ApplicationCard({ application, fitScore, onClick }: ApplicationCardProps) {
+export function ApplicationCard({ application, fitScore, aiStatus, onClick }: ApplicationCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: application.id,
     data: { stage: application.stage },
@@ -111,11 +151,11 @@ export function ApplicationCard({ application, fitScore, onClick }: ApplicationC
       {...listeners}
       {...attributes}
     >
-      <CardVisual application={application} fitScore={fitScore} />
+      <CardVisual application={application} fitScore={fitScore} aiStatus={aiStatus} />
     </div>
   )
 }
 
-export function ApplicationCardOverlay({ application, fitScore }: ApplicationCardProps) {
-  return <CardVisual application={application} fitScore={fitScore} isOverlay />
+export function ApplicationCardOverlay({ application, fitScore, aiStatus }: ApplicationCardProps) {
+  return <CardVisual application={application} fitScore={fitScore} aiStatus={aiStatus} isOverlay />
 }
