@@ -1,7 +1,7 @@
 export default {
   providers: [
     {
-      domain: 'https://neat-ostrich-82.clerk.accounts.dev',
+      domain: process.env.CLERK_JWT_ISSUER_URL,
       applicationID: 'convex',
     },
   ],

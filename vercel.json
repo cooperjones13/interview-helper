@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/__clerk/(.*)", "destination": "https://clerk.tacked.cooperjones.dev/$1" }
+  ]
+}
